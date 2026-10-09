@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4a261"/><stop offset="1" stop-color="#e76f51"/></linearGradient>
+  </defs>
+  <polygon points="64,10 114,36 64,62 14,36" fill="#ffb98a"/>
+  <polygon points="14,36 64,62 64,118 14,92" fill="url(#t)"/>
+  <polygon points="114,36 64,62 64,118 114,92" fill="#c1553a"/>
+  <text x="39" y="98" font-family="DejaVu Sans, sans-serif" font-weight="bold" font-size="40" fill="#fff" transform="skewY(26) translate(0,-24)">R</text>
+</svg>

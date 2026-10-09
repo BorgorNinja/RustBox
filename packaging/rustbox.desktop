@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=RustBox
+GenericName=Virtual Machine Manager
+Comment=Fast KVM virtual machines for Windows on modest PCs
+Exec=rustbox
+Icon=rustbox
+Terminal=false
+Categories=System;Emulator;
+Keywords=virtual;machine;vm;windows;kvm;qemu;
+StartupNotify=true
+StartupWMClass=rustbox

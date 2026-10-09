@@ -1,0 +1,14 @@
+[package]
+name = "rustbox-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "vmctl"
+path = "src/main.rs"
+
+[dependencies]
+rustbox-core = { path = "../core" }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"

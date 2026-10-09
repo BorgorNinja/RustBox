@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+case "$1" in
+remove|purge)
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+    fi
+    ;;
+esac
+# VM data lives in each user's ~/.local/share/rustbox and is never touched here.
+exit 0

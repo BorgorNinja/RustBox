@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+case "$1" in
+configure)
+    # Let the installing user use /dev/kvm (sudo or pkexec installs).
+    U="${SUDO_USER:-}"
+    if [ -z "$U" ] && [ -n "${PKEXEC_UID:-}" ]; then
+        U="$(getent passwd "$PKEXEC_UID" | cut -d: -f1 || true)"
+    fi
+    if [ -n "$U" ] && [ "$U" != "root" ] && getent group kvm >/dev/null 2>&1; then
+        adduser "$U" kvm >/dev/null 2>&1 || true
+        echo "rustbox: added '$U' to the 'kvm' group (log out and back in once to apply)."
+    fi
+    if [ ! -e /dev/kvm ]; then
+        echo "rustbox: /dev/kvm not found - enable virtualization (Intel VT-x / AMD-V) in your BIOS/UEFI."
+    fi
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+    fi
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    fi
+    echo "rustbox: run 'vmctl doctor' to verify your setup."
+    ;;
+esac
+exit 0

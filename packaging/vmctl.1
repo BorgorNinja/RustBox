@@ -1,0 +1,36 @@
+.TH VMCTL 1 "2026" "rustbox" "User Commands"
+.SH NAME
+vmctl \- command line manager for RustBox virtual machines
+.SH SYNOPSIS
+.B vmctl
+<command> [options]
+.SH COMMANDS
+.TP
+.B create NAME [--os windows11|windows10|linux|other] [--iso FILE] [--memory MB] [--cpus N] [--disk-gb N]
+Create a VM with defaults tuned for this machine.
+.TP
+.B list, info, start [--headless], stop [--force], reset, delete
+Manage VMs.
+.TP
+.B snapshot create|list|restore|delete VM [NAME]
+Offline disk snapshots.
+.TP
+.B paravirt VM on|off
+Switch disk and NIC to VirtIO after installing the virtio-win drivers in the guest.
+.TP
+.B iso VM PATH|none
+Attach or eject the install ISO.
+.TP
+.B fetch-drivers
+Download the virtio-win driver ISO.
+.TP
+.B doctor
+Verify KVM, QEMU, UEFI firmware and swtpm are available.
+.TP
+.B host-tune [--apply]
+Show or apply host tweaks (KSM, transparent hugepages). Applying requires root.
+.SH FILES
+.I ~/.local/share/rustbox/vms/
+holds one directory per VM (vm.toml, disk.qcow2, UEFI variables, TPM state).
+.SH SEE ALSO
+qemu-system-x86_64(1), qemu-img(1)
