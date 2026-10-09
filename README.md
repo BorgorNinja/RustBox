@@ -8,7 +8,7 @@ running **Windows on low-end Linux PCs** (Linux Mint, Debian, Ubuntu).
 
 ## Install
 
-    sudo apt install ./rustbox_0.2.2_amd64.deb
+    sudo apt install ./rustbox_0.2.4_amd64.deb
     vmctl doctor                 # checks KVM, QEMU, UEFI firmware, swtpm
 
 Supported: Linux Mint 21/22, LMDE 6, Debian 12+, Ubuntu 22.04+ (64-bit, x86-64 with VT-x/AMD-V).
@@ -49,6 +49,18 @@ Existing VMs keep their old settings. Upgrade one with:
 
 There is **no free 3D driver for Windows guests** on a Linux host (virtio-gpu 3D for Windows is
 experimental and needs a patched host stack; Intel GVT-g is discontinued). Real 3D needs GPU passthrough.
+
+## Troubleshooting
+
+    vmctl diagnose "Windows 10"      # prints display/audio/network facts and the QEMU log tail
+
+* **Ping fails in Windows**: user-mode NAT can only forward ping if the host allows unprivileged ICMP
+  (`cat /proc/sys/net/ipv4/ping_group_range` must not be `1 0`). Fix: `sudo vmctl host-tune --apply --persist`.
+  Browsing works without it. IPv6 is off by default (Windows tried IPv6 first).
+* **No sound**: `vmctl audio "Windows 10" on --backend pa` (or `pipewire`, `alsa`). Check the Windows volume mixer.
+* **~30 fps**: QEMU polls VGA-type displays about every 30 ms (about 33 fps). Only guest drivers that
+  push updates (QXL, VirtIO GPU) avoid this. In Windows, Device Manager > Display adapters must show
+  "Red Hat QXL", not "Microsoft Basic Display Adapter".
 
 ## What makes it fast on weak hardware
 

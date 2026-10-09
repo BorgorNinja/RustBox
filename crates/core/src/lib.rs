@@ -1,5 +1,6 @@
 //! rustbox-core: VM model, host tuning and the KVM/QEMU launch engine.
 pub mod config;
+pub mod diag;
 pub mod firmware;
 pub mod hosttune;
 pub mod hw;

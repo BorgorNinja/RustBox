@@ -112,6 +112,10 @@ pub struct Storage {
 pub struct Network {
     #[serde(default = "yes")]
     pub enabled: bool,
+    /// IPv6 on the NAT network. Off by default: SLIRP cannot route IPv6 to the internet, so Windows
+    /// would try IPv6 first (e.g. `ping google.com`) and fail.
+    #[serde(default)]
+    pub ipv6: bool,
     #[serde(default)]
     pub adapter: NetAdapter,
 }
@@ -120,11 +124,14 @@ pub struct Network {
 pub struct Audio {
     #[serde(default = "yes")]
     pub enabled: bool,
+    /// Force a host backend (pa, pipewire, alsa, sdl, spice). None = auto-detect.
+    #[serde(default)]
+    pub backend: Option<String>,
 }
 
 impl Default for Audio {
     fn default() -> Self {
-        Audio { enabled: true }
+        Audio { enabled: true, backend: None }
     }
 }
 
@@ -200,6 +207,7 @@ impl VmConfig {
             },
             network: Network {
                 enabled: true,
+                ipv6: false,
                 adapter: if linux_like { NetAdapter::Virtio } else { NetAdapter::E1000e },
             },
             audio: Audio::default(),

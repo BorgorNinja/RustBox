@@ -78,7 +78,16 @@ enum Cmd {
         gl: Option<bool>,
     },
     /// Turn guest audio on or off
-    Audio { vm: String, #[arg(value_parser = ["on", "off"])] state: String },
+    Audio {
+        vm: String,
+        #[arg(value_parser = ["on", "off"])]
+        state: String,
+        /// Force a host backend instead of auto-detect
+        #[arg(long, value_parser = ["auto", "pa", "pipewire", "alsa", "sdl", "spice"])]
+        backend: Option<String>,
+    },
+    /// Print facts for debugging network, audio and display problems
+    Diagnose { vm: String },
     /// Reopen the SPICE display window of a running VM
     View { vm: String },
     /// Check that everything needed is installed
@@ -87,6 +96,9 @@ enum Cmd {
     HostTune {
         #[arg(long)]
         apply: bool,
+        /// Also keep the ping setting after reboot (writes /etc/sysctl.d/99-rustbox.conf)
+        #[arg(long)]
+        persist: bool,
     },
 }
 
@@ -130,6 +142,9 @@ fn main() -> Result<()> {
         }
         Cmd::Start { vm, headless } => {
             let vm = store.find(&vm)?;
+            for n in rustbox_core::qemu::notices(&vm.cfg, &rustbox_core::qemu::Caps::detect(), hw.kvm) {
+                eprintln!("notice: {n}");
+            }
             let pid = store.start(&vm, headless)?;
             println!("Started '{}' (pid {pid}){}", vm.cfg.name, if hw.kvm { "" } else { " [no KVM: software emulation, expect slowness]" });
         }
@@ -176,9 +191,13 @@ fn main() -> Result<()> {
             store.save(&vm)?;
             println!("Display for '{}' set to {adapter}. Takes effect at next start.", vm.cfg.name);
         }
-        Cmd::Audio { vm, state } => {
+        Cmd::Diagnose { vm } => {
+            for l in rustbox_core::diag::report(&store.find(&vm)?) { println!("{l}"); }
+        }
+        Cmd::Audio { vm, state, backend } => {
             let mut vm = store.find(&vm)?;
             vm.cfg.audio.enabled = state == "on";
+            if let Some(b) = backend { vm.cfg.audio.backend = if b == "auto" { None } else { Some(b) }; }
             store.save(&vm)?;
             println!("Audio {state} for '{}'. Takes effect at next start.", vm.cfg.name);
         }
@@ -229,13 +248,19 @@ fn main() -> Result<()> {
             }
             println!("Host: {} MB RAM, {} CPUs", hw.mem_total_mb, hw.cpus);
         }
-        Cmd::HostTune { apply } => {
+        Cmd::HostTune { apply, persist } => {
             for t in hosttune::TWEAKS {
                 println!("{:<24} now: {:<10} want: {:<10} ({})", t.name, hosttune::current(t.path), t.want, t.why);
             }
             println!("zram swap: {}", if hosttune::zram_active() { "active" } else { "not active (recommended on <8 GB hosts: sudo apt install zram-tools)" });
             if apply {
                 for (_, m) in hosttune::apply() { println!("{m}"); }
+                if persist {
+                    match hosttune::persist() {
+                        Ok(_) => println!("Saved {}", hosttune::SYSCTL_FILE),
+                        Err(e) => println!("Could not write {}: {e}", hosttune::SYSCTL_FILE),
+                    }
+                }
             } else {
                 println!("Run `sudo vmctl host-tune --apply` to apply (not persistent across reboots).");
             }

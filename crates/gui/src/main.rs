@@ -11,6 +11,7 @@ pub struct Ui {
     pub win: gtk::ApplicationWindow,
     pub store: Store,
     pub hw: Hardware,
+    caps: rustbox_core::qemu::Caps,
     list: gtk::ListBox,
     details: gtk::Box,
     snap_list: gtk::ListBox,
@@ -222,6 +223,11 @@ impl Ui {
             ("Audio", vec![("Controller".into(), if c.audio.enabled { "Intel HD Audio (host driver auto-detected)" } else { "Disabled" }.into())]),
             ("Network", vec![("Adapter".into(), if c.network.enabled { format!("{:?} (NAT)", c.network.adapter) } else { "Not attached".into() })]),
         ];
+        let notes = rustbox_core::qemu::notices(c, &self.caps, self.hw.kvm);
+        if !notes.is_empty() {
+            let rows: Vec<(String, String)> = notes.into_iter().map(|n| ("⚠".to_string(), n)).collect();
+            self.details.append(&section("Notices", &rows));
+        }
         for (title, rows) in secs {
             self.details.append(&section(title, &rows));
         }
@@ -446,6 +452,7 @@ fn build_ui(app: &gtk::Application) {
     let ui = Rc::new(Ui {
         win: win.clone(),
         store,
+        caps: rustbox_core::qemu::Caps::detect(),
         hw,
         list: list.clone(),
         details,

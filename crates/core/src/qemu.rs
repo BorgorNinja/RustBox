@@ -48,10 +48,12 @@ impl Caps {
         let has = |n: &str| audio_list.lines().any(|l| l.trim() == n);
         let rt = std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
         let sock = |rel: &str| rt.as_ref().map(|r| r.join(rel).exists()).unwrap_or(false);
-        let audio = if has("pipewire") && sock("pipewire-0") {
-            Some("pipewire")
-        } else if has("pa") && (sock("pulse/native") || std::env::var_os("PULSE_SERVER").is_some()) {
+        // The PulseAudio protocol is the most compatible choice: it works on PulseAudio and, through
+        // pipewire-pulse, on PipeWire. Native PipeWire is only the second choice.
+        let audio = if has("pa") && (sock("pulse/native") || std::env::var_os("PULSE_SERVER").is_some()) {
             Some("pa")
+        } else if has("pipewire") && sock("pipewire-0") {
+            Some("pipewire")
         } else if has("alsa") {
             Some("alsa")
         } else if has("sdl") {
@@ -66,6 +68,19 @@ impl Caps {
             audio: audio.map(String::from),
             viewer: which("remote-viewer"),
         }
+    }
+
+    /// Host audio backend that will be used for this VM (user override wins).
+    pub fn audio_for(&self, cfg: &VmConfig, use_spice: bool) -> Option<String> {
+        if !cfg.audio.enabled {
+            return None;
+        }
+        cfg.audio
+            .backend
+            .clone()
+            .filter(|b| b != "auto")
+            .or_else(|| self.audio.clone())
+            .or_else(|| use_spice.then(|| "spice".to_string()))
     }
 
     /// True when the display will go through SPICE for this config.
@@ -205,14 +220,14 @@ pub fn build_args(cfg: &VmConfig, p: &RunPaths, o: &Options) -> Vec<String> {
             NetAdapter::E1000e => "e1000e",
             NetAdapter::Virtio => "virtio-net-pci",
         };
-        a.extend(["-netdev".into(), "user,id=net0".into()]);
+        let netdev = if cfg.network.ipv6 { "user,id=net0" } else { "user,id=net0,ipv6=off" };
+        a.extend(["-netdev".into(), netdev.into()]);
         a.extend(["-device".into(), format!("{nic},netdev=net0")]);
     }
 
     // Audio: Intel HDA has an inbox Windows driver. Backend is auto-detected (PipeWire, PulseAudio, ALSA).
     if cfg.audio.enabled {
-        let backend = o.caps.audio.clone().or_else(|| use_spice.then(|| "spice".to_string()));
-        if let Some(be) = backend {
+        if let Some(be) = o.caps.audio_for(cfg, use_spice) {
             a.extend(["-audiodev".into(), format!("{be},id=snd0")]);
             a.extend(["-device".into(), "ich9-intel-hda,id=hda0".into()]);
             a.extend(["-device".into(), "hda-duplex,audiodev=snd0".into()]);
@@ -241,4 +256,42 @@ fn add_cd(a: &mut Vec<String>, id: &str, iso: &Path, bus: &str, bootindex: Optio
         dev.push_str(&format!(",bootindex={b}"));
     }
     a.extend(["-device".into(), dev]);
+}
+
+/// Human-readable problems that make a VM slower or silent. Shown in the GUI and by `vmctl start`.
+pub fn notices(cfg: &VmConfig, caps: &Caps, kvm: bool) -> Vec<String> {
+    let mut n = vec![];
+    if !kvm {
+        n.push("KVM is unavailable: the VM runs in very slow software emulation.".to_string());
+    }
+    let spice_ready = caps.qxl && caps.spice;
+    match cfg.display.adapter {
+        VideoAdapter::Qxl if !spice_ready => n.push(
+            "QXL/SPICE support is missing, so the plain window is used (about 30 fps). Install: sudo apt install qemu-system-modules-spice".into(),
+        ),
+        VideoAdapter::Qxl if caps.viewer.is_none() => n.push(
+            "SPICE viewer not installed, so the built-in window is used (about 30 fps). Install: sudo apt install virt-viewer".into(),
+        ),
+        VideoAdapter::Std if cfg.os.is_windows() => n.push(
+            "Standard VGA is capped near 30 fps. Pick QXL + SPICE in Settings > Display.".into(),
+        ),
+        VideoAdapter::Virtio if cfg.os.is_windows() => n.push(
+            "VirtIO GPU needs the viogpudo driver inside Windows; without it you are on basic display (about 30 fps). QXL + SPICE is easier.".into(),
+        ),
+        _ => {}
+    }
+    let spice = caps.use_spice(cfg, false);
+    if cfg.audio.enabled && caps.audio_for(cfg, spice).is_none() {
+        n.push("No host audio backend found (is PulseAudio/PipeWire running?).".into());
+    }
+    if cfg.network.enabled && !unprivileged_ping_ok() {
+        n.push("Ping inside the VM will not work: the host blocks unprivileged ICMP. Browsing is fine. Fix: sudo vmctl host-tune --apply --persist".into());
+    }
+    n
+}
+
+pub fn unprivileged_ping_ok() -> bool {
+    let t = std::fs::read_to_string("/proc/sys/net/ipv4/ping_group_range").unwrap_or_default();
+    let v: Vec<i64> = t.split_whitespace().filter_map(|x| x.parse().ok()).collect();
+    v.len() == 2 && v[0] <= v[1]
 }

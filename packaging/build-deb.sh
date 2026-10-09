@@ -34,8 +34,8 @@ Priority: optional
 Architecture: amd64
 Installed-Size: ${SIZE}
 Maintainer: BorgorNinja <BorgorNinja@users.noreply.github.com>
-Depends: libc6 (>= ${GLIBC_MIN}), libgtk-4-1 (>= 4.6), libglib2.0-0, qemu-system-x86 (>= 1:6.2), qemu-system-gui, qemu-utils, ovmf, swtpm, curl
-Recommends: qemu-system-modules-spice, virt-viewer, xorriso, qemu-system-modules-opengl, zram-tools
+Depends: libc6 (>= ${GLIBC_MIN}), libgtk-4-1 (>= 4.6), libglib2.0-0, qemu-system-x86 (>= 1:6.2), qemu-system-gui, qemu-utils, qemu-system-modules-spice, virt-viewer, ovmf, swtpm, curl
+Recommends: xorriso, qemu-system-modules-opengl, zram-tools
 Description: Fast KVM virtual machines for Windows on modest PCs
  RustBox is a VirtualBox-style manager written in Rust, built on KVM.
  It runs Windows 10/11 guests with Hyper-V enlightenments, NVMe/VirtIO

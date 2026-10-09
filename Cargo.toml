@@ -3,7 +3,7 @@ members = ["crates/core", "crates/cli", "crates/gui"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.2"
+version = "0.2.4"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["BorgorNinja"]

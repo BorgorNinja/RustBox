@@ -180,6 +180,19 @@ impl Store {
         let caps = Caps::detect();
         let spice = caps.use_spice(&cfg, headless);
         let viewer = caps.viewer.clone();
+        let _ = fs::write(
+            run.join("launch.txt"),
+            format!(
+                "kvm={}\ndisplay={}\naudio_backend={}\nnic={:?} ipv6={}\nvirtio_iso={}\ntools_iso={}\n",
+                kvm,
+                if spice { "spice (qxl)" } else if headless { "none" } else { "gtk window" },
+                caps.audio_for(&cfg, spice).unwrap_or_else(|| "none".into()),
+                cfg.network.adapter,
+                cfg.network.ipv6,
+                cfg.storage.virtio_iso.is_some(),
+                paths.tools_iso.is_some(),
+            ),
+        );
         let args = build_args(&cfg, &paths, &Options { kvm, headless, caps });
 
         let log = File::create(run.join("qemu.log"))?;

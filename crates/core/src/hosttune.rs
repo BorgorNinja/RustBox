@@ -13,7 +13,16 @@ pub const TWEAKS: &[Tweak] = &[
             why: "merge identical RAM pages between VMs and host" },
     Tweak { name: "Transparent hugepages", path: "/sys/kernel/mm/transparent_hugepage/enabled",
             want: "madvise", why: "fewer TLB misses for guest RAM without bloating the host" },
+    Tweak { name: "Unprivileged ping", path: "/proc/sys/net/ipv4/ping_group_range",
+            want: "0 2147483647", why: "lets ping work inside VMs on NAT (the Debian/Ubuntu default)" },
 ];
+
+pub const SYSCTL_FILE: &str = "/etc/sysctl.d/99-rustbox.conf";
+
+/// Make the ping setting survive reboots.
+pub fn persist() -> std::io::Result<()> {
+    fs::write(SYSCTL_FILE, "net.ipv4.ping_group_range = 0 2147483647\n")
+}
 
 pub fn current(path: &str) -> String {
     let raw = fs::read_to_string(path).unwrap_or_default();
